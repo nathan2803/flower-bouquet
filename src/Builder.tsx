@@ -9,6 +9,7 @@ import { FLOWER_TYPES, layoutFlowers } from './bouquet/flowers';
 import { FONTS } from './bouquet/fonts';
 import type { Arrangement, BouquetProps, ContainerType, FlowerSpec, FlowerType, Palette } from './bouquet/types';
 import { LIVE_FRAMES } from './Gift';
+import { ColorPicker, FLOWER_SWATCHES, PAPER_SWATCHES } from './maker/ColorPicker';
 import { DragHandles } from './maker/DragHandles';
 import { FlowerPicker } from './maker/FlowerPicker';
 import { MAX_FLOWERS, MAX_MESSAGE, giftLink } from './share';
@@ -82,12 +83,12 @@ function Choice<T extends string>({ legend, name, value, options, onChange }: {
   );
 }
 
-const ColorField: React.FC<{ label: string; value: string; onChange: (v: string) => void }> = ({ label, value, onChange }) => (
-  <label className="color-field">
-    <input type="color" value={value} onChange={(e) => onChange(e.target.value)} />
-    <span>{label}</span>
-  </label>
-);
+const ALL_SWATCHES = [...PAPER_SWATCHES, ...FLOWER_SWATCHES];
+const CENTER_SWATCHES = [...FLOWER_SWATCHES, { hex: '#6B4423', name: 'Seed brown' }, { hex: '#2C2A4A', name: 'Ink blue' }];
+
+const ColorField: React.FC<{ label: string; value: string; onChange: (v: string) => void; swatches?: typeof FLOWER_SWATCHES }> = ({
+  label, value, onChange, swatches = ALL_SWATCHES,
+}) => <ColorPicker label={label} value={value} onChange={onChange} swatches={swatches} showLabel />;
 
 const RemoveIcon = () => (
   <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
@@ -105,12 +106,11 @@ const FlowerRow: React.FC<{
   return (
     <li className={`flower ${active ? 'flower--active' : ''}`}>
       <div className="flower__main">
-        <input
-          type="color"
-          className="flower__swatch"
-          aria-label={`${label} colour`}
+        <ColorPicker
+          label={`${label} colour`}
           value={flowerColor(flower, palette)}
-          onChange={(e) => set({ color: e.target.value })}
+          onChange={(v) => set({ color: v })}
+          onReset={() => set({ color: undefined })}
         />
         <FlowerPicker
           label={`Flower ${index + 1}`}
@@ -157,6 +157,7 @@ const FlowerRow: React.FC<{
           {CENTER_TYPES.includes(flower.type) && (
             <ColorField
               label="Centre"
+              swatches={CENTER_SWATCHES}
               value={resolve(flower.centerColor, palette) ?? (flower.type === 'anemone' ? '#2C2A4A' : flower.type === 'sunflower' ? '#6B4423' : palette.butter)}
               onChange={(v) => set({ centerColor: v })}
             />
@@ -379,13 +380,11 @@ export const Builder: React.FC = () => {
                 +
               </button>
             </div>
-            <input
-              type="color"
-              className="flower__swatch"
-              aria-label={`Colour for new ${FLOWER_LABELS[adding].toLowerCase()}`}
-              title="Colour"
+            <ColorPicker
+              label={`Colour for new ${FLOWER_LABELS[adding].toLowerCase()}`}
               value={flowerColor({ type: adding, color: addColor }, draft.palette)}
-              onChange={(e) => setAddColor(e.target.value)}
+              onChange={setAddColor}
+              onReset={() => setAddColor(undefined)}
             />
             <FlowerPicker
               label="Flower to add"
