@@ -69,7 +69,7 @@ const usePrefersReducedMotion = () => {
  * The gift itself: the Tap to open cover, the bouquet playing, music, the
  * Breeze button and the endless hold. `still` opens straight onto one frame.
  */
-export const Gift: React.FC<{ gift: BouquetProps; still?: number | null; makeHref?: string }> = ({ gift, still = null, makeHref }) => {
+export const Gift: React.FC<{ gift: BouquetProps; still?: number | null }> = ({ gift, still = null }) => {
   const baseProps = gift;
   const reducedMotion = usePrefersReducedMotion();
   const playerRef = useRef<PlayerRef>(null);
@@ -217,12 +217,6 @@ export const Gift: React.FC<{ gift: BouquetProps; still?: number | null; makeHre
             </button>
           </div>
         </div>
-
-        {opened && inHold && makeHref && (
-          <a className="make-link" href={makeHref}>
-            Make your own
-          </a>
-        )}
 
         <button
           type="button"

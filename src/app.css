@@ -164,31 +164,6 @@ body {
   right: 12px;
 }
 
-.make-link {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  min-height: 44px;
-  display: inline-flex;
-  align-items: center;
-  padding: 0 16px;
-  border: 1.5px solid rgb(46 42 39 / 0.22);
-  border-radius: 999px;
-  background: rgb(250 246 240 / 0.9);
-  color: var(--ink);
-  font-size: 15px;
-  text-decoration: none;
-}
-
-.make-link:hover {
-  background: var(--paper);
-}
-
-.make-link:focus-visible {
-  outline: 2px solid var(--ink);
-  outline-offset: 3px;
-}
-
 /* ---------- breeze controls, along the bottom edge ---------- */
 .dock {
   position: absolute;

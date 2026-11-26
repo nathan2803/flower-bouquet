@@ -34,8 +34,7 @@ Open the site. The main page is the **maker**:
 5. Tap **Copy gift link** (or **Share…** on a phone) and send it.
 
 The whole design is stored inside the link (`?g=…`), so there's no account or database. Anyone
-with the link can see the note. Whoever opens it gets the **Tap to open** gift. Once it has played,
-a **Make your own** link takes them back to the maker.
+with the link can see the note. Whoever opens it gets the **Tap to open** gift.
 
 The short form still works for quick links:
 `?to=Sam&from=Alex&msg=Happy%20birthday!&preset=lilyVase` (presets: `classic`, `blush`, `sunday`,

@@ -14,5 +14,5 @@ export const App: React.FC = () => {
     return { gift: giftFromUrl(window.location.search), still: Number.isFinite(frame) && frame > 0 ? frame : null };
   }, []);
   if (!gift) return <Builder />;
-  return <Gift gift={gift} still={still} makeHref={window.location.pathname} />;
+  return <Gift gift={gift} still={still} />;
 };
