@@ -35,10 +35,28 @@ Open the site. The main page is the **maker**:
    greenery goes to the sides and sprays across the top. Each flower also has size, tilt, leaves,
    and (for some) petals and centre colour.
 4. Set the ribbon, container and other colours.
-5. Tap **Copy gift link** (or **Share…** on a phone) and send it.
+5. Tap **Copy gift link** (or **Share…** on a phone) and send it, or **Download QR code** to print
+   it on a card.
 
-The whole design is stored inside the link (`?g=…`), so there's no account or database. Anyone
+The whole design is stored inside the link (`?b=…`), so there's no account or database. Anyone
 with the link can see the note. Whoever opens it gets the **Tap to open** gift.
+
+Links are packed into a small binary format (`packGift` in `share.ts`), about a quarter of the
+length of the old JSON links; a typical gift link is around 230 characters, most of it the
+message. Old `?g=…` links still open.
+
+### QR code
+
+The Send section draws a QR code for the link in the bouquet's own colours: round dots fading
+from the main flower colour to a deep shade, ringed corner eyes, and a sticker of the bouquet's
+leading flower in the middle (`src/maker/QrCode.tsx`, `qr.ts`, `stickers.ts`). **Download QR
+code** saves a 1200 × 1500 card with "For <name>" under it.
+
+It's tuned to scan, not just to look nice: error correction level M (higher levels make the code
+denser and scanned worse in testing), the lightest dots kept at 4:1 contrast, and the sticker's
+colours kept light so a camera can't mistake it for a corner eye. It was checked with the
+browser's barcode reader across every preset, 11 flower types × 8 colours, long and short
+messages, at sizes from 320 to 1600 px and with blur. Still, scan your own before printing.
 
 The short form still works for quick links:
 `?to=Sam&from=Alex&msg=Happy%20birthday!&preset=lilyVase` (presets: `classic`, `blush`, `sunday`,
@@ -153,7 +171,7 @@ src/
   Builder.tsx              The maker page: live preview, flower list, colours, Copy link
   Gift.tsx                 Gift page: cover, music, breeze, endless hold
   share.ts                 Packs a design into the link and reads it back safely
-  maker/                   Flower picker with previews, drag handles on the preview
+  maker/                   Flower and colour pickers, drag handles, QR code and stickers
   audio/musicBox.ts        Web Audio music box and breeze whoosh
   remotion/Root.tsx        Compositions (Bouquet, Bouquet-breeze, one per preset)
   bouquet/

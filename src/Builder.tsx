@@ -12,6 +12,8 @@ import { LIVE_FRAMES } from './Gift';
 import { ColorPicker, FLOWER_SWATCHES, PAPER_SWATCHES } from './maker/ColorPicker';
 import { DragHandles } from './maker/DragHandles';
 import { FlowerPicker } from './maker/FlowerPicker';
+import { qrLook } from './maker/qr';
+import { QrCode, qrCardPng } from './maker/QrCode';
 import { MAX_FLOWERS, MAX_MESSAGE, giftLink } from './share';
 
 /** The frame the preview rests on: everything open, card showing. */
@@ -180,6 +182,7 @@ export const Builder: React.FC = () => {
   const [active, setActive] = useState<number | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<PlayerRef>(null);
+  const qrRef = useRef<SVGSVGElement>(null);
 
   const gift: BouquetProps = useMemo(
     () => ({
@@ -196,6 +199,7 @@ export const Builder: React.FC = () => {
     [draft],
   );
   const link = useMemo(() => giftLink(gift), [gift]);
+  const look = useMemo(() => qrLook(gift), [gift]);
   const ready = draft.recipientName.trim() !== '' && draft.senderName.trim() !== '' && draft.flowers.length > 0;
 
   useEffect(() => {
@@ -248,6 +252,36 @@ export const Builder: React.FC = () => {
   const share = async () => {
     try {
       await navigator.share({ title: `A bouquet for ${gift.recipientName}`, text: `I made you something 💐`, url: link });
+    } catch {
+      /* closed the share sheet */
+    }
+  };
+
+  const qrFile = async () => {
+    const blob = await qrCardPng(qrRef.current!, gift, FONTS);
+    const name = `bouquet-for-${gift.recipientName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'you'}.png`;
+    return new File([blob], name, { type: 'image/png' });
+  };
+
+  const downloadQr = async () => {
+    try {
+      const file = await qrFile();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(file);
+      a.download = file.name;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      setStatus('QR code saved. Print it, or send the picture.');
+    } catch {
+      setStatus('Couldn’t save the QR code. Try again, or take a screenshot of it.');
+    }
+  };
+
+  const shareQr = async () => {
+    try {
+      const file = await qrFile();
+      if (!navigator.canShare?.({ files: [file] })) return downloadQr();
+      await navigator.share({ files: [file], title: `A bouquet for ${gift.recipientName}` });
     } catch {
       /* closed the share sheet */
     }
@@ -460,6 +494,32 @@ export const Builder: React.FC = () => {
             <input readOnly value={ready ? link : ''} onFocus={(e) => e.currentTarget.select()} />
           </label>
           <p className="hint">The design and your note are saved inside the link itself, so anyone with the link can see them.</p>
+
+          {ready && (
+            <div className="qr">
+              <figure className="qr__card" style={{ background: look.bg, color: look.deep }}>
+                <QrCode ref={qrRef} link={link} gift={gift} className="qr__code" title={`QR code that opens the bouquet for ${gift.recipientName}`} />
+                <figcaption>
+                  <span className="qr__to" style={{ fontFamily: FONTS.hand }}>For {gift.recipientName}</span>
+                  <span className="qr__scan">Scan to open your bouquet</span>
+                </figcaption>
+              </figure>
+              <div className="qr__side">
+                <h3 style={{ fontFamily: FONTS.serif }}>QR code</h3>
+                <p className="hint">Its colours and the flower in the middle come from your bouquet. Print it on a card, or send the picture.</p>
+                <div className="send__row">
+                  <button type="button" className="btn btn--ghost" onClick={downloadQr}>
+                    Download QR code
+                  </button>
+                  {'canShare' in navigator && (
+                    <button type="button" className="btn btn--quiet" onClick={shareQr}>
+                      Share QR code…
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </section>
       </div>
     </main>
