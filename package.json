@@ -1,0 +1,31 @@
+{
+  "name": "flower-bouquet",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "An animated digital flower bouquet gift, built with Remotion. Renders to MP4 or runs as a static web page.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "studio": "remotion studio src/remotion/index.ts",
+    "render": "remotion render src/remotion/index.ts Bouquet out/bouquet.mp4",
+    "typecheck": "tsc --noEmit",
+    "canvas:bundle": "esbuild scripts/canvas/entry.ts --bundle --format=iife --global-name=BQ --minify --target=es2019 --alias:remotion=./scripts/canvas/remotion-shim.ts --outfile=out/canvas-scene.js"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.547",
+    "@remotion/google-fonts": "^4.0.547",
+    "@remotion/player": "^4.0.547",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "^4.0.547"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.32",
+    "@types/react-dom": "^18.3.7",
+    "@vitejs/plugin-react": "^5.2.0",
+    "typescript": "^7.0.2",
+    "vite": "^7.3.8"
+  }
+}
