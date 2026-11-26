@@ -171,6 +171,8 @@ const FlowerRow: React.FC<{
 export const Builder: React.FC = () => {
   const [draft, setDraft] = useState<Draft>(() => fromPreset('classic'));
   const [adding, setAdding] = useState<FlowerType>('rose');
+  /** Colour for flowers about to be added; undefined = the flower's natural colour. */
+  const [addColor, setAddColor] = useState<string | undefined>(undefined);
   const [count, setCount] = useState(1);
   const [status, setStatus] = useState('');
   const [playing, setPlaying] = useState(false);
@@ -377,14 +379,31 @@ export const Builder: React.FC = () => {
                 +
               </button>
             </div>
-            <FlowerPicker label="Flower to add" value={adding} palette={draft.palette} onChange={setAdding} />
+            <input
+              type="color"
+              className="flower__swatch"
+              aria-label={`Colour for new ${FLOWER_LABELS[adding].toLowerCase()}`}
+              title="Colour"
+              value={flowerColor({ type: adding, color: addColor }, draft.palette)}
+              onChange={(e) => setAddColor(e.target.value)}
+            />
+            <FlowerPicker
+              label="Flower to add"
+              value={adding}
+              palette={draft.palette}
+              color={addColor}
+              onChange={(t) => {
+                setAdding(t);
+                setAddColor(undefined);
+              }}
+            />
             <button
               type="button"
               className="btn btn--ghost"
               disabled={room === 0}
               onClick={() => {
                 const n = Math.min(count, room);
-                const added = Array.from({ length: n }, (): FlowerSpec => ({ type: adding }));
+                const added = Array.from({ length: n }, (): FlowerSpec => ({ type: adding, color: addColor }));
                 update({ flowers: autoArrange([...draft.flowers, ...added], draft.arrangement, { keepPlaced: true }) });
                 setCount(1);
               }}
