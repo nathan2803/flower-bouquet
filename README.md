@@ -29,7 +29,11 @@ Open the site. The main page is the **maker**:
 
 1. Type who it's to, who it's from, and your message.
 2. Pick a ready-made mix, a holder (paper wrap, basket, vase, hatbox, hand-tied) and a shape.
-3. Add, remove and recolour flowers. Each one has size, position, tilt, leaves, and (for some) petals and centre colour.
+3. Add flowers from the picture picker (pick a number to add several at once), remove and
+   recolour them. **Drag the dots on the preview** to move a flower, or focus a dot and use the
+   arrow keys. **Arrange for me** spaces everything out: blooms fill the middle without piling up,
+   greenery goes to the sides and sprays across the top. Each flower also has size, tilt, leaves,
+   and (for some) petals and centre colour.
 4. Set the ribbon, container and other colours.
 5. Tap **Copy gift link** (or **Share…** on a phone) and send it.
 
@@ -149,12 +153,14 @@ src/
   Builder.tsx              The maker page: live preview, flower list, colours, Copy link
   Gift.tsx                 Gift page: cover, music, breeze, endless hold
   share.ts                 Packs a design into the link and reads it back safely
+  maker/                   Flower picker with previews, drag handles on the preview
   audio/musicBox.ts        Web Audio music box and breeze whoosh
   remotion/Root.tsx        Compositions (Bouquet, Bouquet-breeze, one per preset)
   bouquet/
     BouquetComposition.tsx Layer order for the whole scene
     Flower.tsx             One stem: stem layer and head layer
     flowers.ts             Flower library, arrangements, layout, sway and breeze bend
+    arrange.ts             Arrange for me: size-aware placement
     containers.ts          Basket, vase, hatbox, posy and the bow
     WrappingPaper.tsx      Kraft wrap and tissue
     Container.tsx          Container components

@@ -243,6 +243,7 @@ body {
 }
 
 .maker__stage {
+  position: relative;
   width: 100%;
   aspect-ratio: 9 / 16;
   max-height: calc(100dvh - 120px);
@@ -535,6 +536,184 @@ body {
 .add-row select {
   width: auto;
   min-width: 180px;
+}
+
+/* ---------- flower picker ---------- */
+.picker {
+  position: relative;
+  min-width: 0;
+}
+
+.picker__trigger {
+  width: 100%;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 4px;
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  background: var(--field);
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.picker__trigger span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.picker__trigger:hover {
+  border-color: rgb(46 42 39 / 0.4);
+}
+
+.picker__trigger:focus-visible,
+.picker__option:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.picker__chevron {
+  flex: none;
+  color: var(--ink-soft);
+}
+
+.thumb {
+  flex: none;
+  display: block;
+  border-radius: 8px;
+  background: var(--paper);
+}
+
+.picker__panel {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  left: 0;
+  width: min(352px, calc(100vw - 32px));
+  max-height: min(440px, 60vh);
+  overflow-y: auto;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--field);
+  box-shadow: 0 2px 6px rgb(46 42 39 / 0.08), 0 18px 40px rgb(46 42 39 / 0.16);
+}
+
+.picker__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.picker__option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px;
+  border: 1.5px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.2;
+  text-align: center;
+  cursor: pointer;
+}
+
+.picker__option:hover {
+  background: rgb(46 42 39 / 0.05);
+}
+
+.picker__option[aria-pressed='true'] {
+  border-color: var(--ink);
+  background: var(--paper);
+}
+
+.picker__option .thumb {
+  width: 64px;
+  height: 64px;
+}
+
+.add-row .picker {
+  flex: 0 1 220px;
+}
+
+/* ---------- drag handles on the preview ---------- */
+.handles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 160ms ease-out;
+}
+
+.maker__stage:hover .handles,
+.handles:focus-within,
+.handles.is-dragging {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .handles {
+    opacity: 1;
+  }
+}
+
+.handle {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  margin: -22px 0 0 -22px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  pointer-events: auto;
+  cursor: grab;
+  touch-action: none;
+}
+
+.handle:active {
+  cursor: grabbing;
+}
+
+.handle__dot {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: rgb(46 42 39 / 0.55);
+  box-shadow: 0 1px 4px rgb(46 42 39 / 0.35);
+  transition: transform 120ms ease-out, background-color 120ms ease-out;
+}
+
+.handle:hover .handle__dot,
+.handle.is-active .handle__dot {
+  transform: scale(1.3);
+  background: var(--ink);
+}
+
+.handle:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -4px;
+}
+
+.maker__drag-hint {
+  margin-top: -6px;
+}
+
+.flower--active {
+  border-color: var(--ink);
 }
 
 .stepper {

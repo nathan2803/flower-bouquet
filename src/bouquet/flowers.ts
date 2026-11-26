@@ -556,3 +556,12 @@ export const headShapes = (e: LaidOutFlower, ck: Clock, pal: Palette, calm: Calm
   const local = e.def.head(e.color, bloom, pal, { center: e.center, petals: e.petals });
   return withTransform(withTransform(local, place), swayTransform(e, ck, calm));
 };
+
+/** Turns a point on the 1080 × 1920 canvas back into a flower's normalised x / y. */
+export const pointToPosition = (hx: number, hy: number, container: ContainerType = 'wrap', arrangement: Arrangement = 'dome') => {
+  const box = CONTAINERS[container] ?? CONTAINERS.wrap;
+  const arr = ARRANGEMENTS[arrangement] ?? ARRANGEMENTS.dome;
+  const x = (hx - CX) / arr.spread;
+  const y = (arr.base - box.lift - hy) / (arr.height - box.lift);
+  return { x: Math.round(Math.max(-1.15, Math.min(1.15, x)) * 100) / 100, y: Math.round(Math.max(-0.35, Math.min(1.15, y)) * 100) / 100 };
+};

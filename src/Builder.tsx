@@ -4,10 +4,13 @@ import { BouquetComposition } from './bouquet/BouquetComposition';
 import {
   CENTER_TYPES, DEFAULT_PALETTE, FLOWER_LABELS, PETAL_DEFAULTS, PRESETS, VIDEO, defaultBouquetProps, type PresetName,
 } from './bouquet/config';
-import { FLOWER_TYPES, FLOWER_TYPE_NAMES } from './bouquet/flowers';
+import { autoArrange } from './bouquet/arrange';
+import { FLOWER_TYPES, layoutFlowers } from './bouquet/flowers';
 import { FONTS } from './bouquet/fonts';
 import type { Arrangement, BouquetProps, ContainerType, FlowerSpec, FlowerType, Palette } from './bouquet/types';
 import { LIVE_FRAMES } from './Gift';
+import { DragHandles } from './maker/DragHandles';
+import { FlowerPicker } from './maker/FlowerPicker';
 import { MAX_FLOWERS, MAX_MESSAGE, giftLink } from './share';
 
 /** The frame the preview rests on: everything open, card showing. */
@@ -93,14 +96,14 @@ const RemoveIcon = () => (
 );
 
 const FlowerRow: React.FC<{
-  flower: FlowerSpec; index: number; palette: Palette;
+  flower: FlowerSpec; index: number; palette: Palette; active: boolean;
   onChange: (f: FlowerSpec) => void; onRemove: () => void;
-}> = ({ flower, index, palette, onChange, onRemove }) => {
+}> = ({ flower, index, palette, active, onChange, onRemove }) => {
   const label = FLOWER_LABELS[flower.type];
   const set = (patch: Partial<FlowerSpec>) => onChange({ ...flower, ...patch });
   const placed = typeof flower.x === 'number' && typeof flower.y === 'number';
   return (
-    <li className="flower">
+    <li className={`flower ${active ? 'flower--active' : ''}`}>
       <div className="flower__main">
         <input
           type="color"
@@ -109,17 +112,13 @@ const FlowerRow: React.FC<{
           value={flowerColor(flower, palette)}
           onChange={(e) => set({ color: e.target.value })}
         />
-        <select
-          aria-label={`Flower ${index + 1} type`}
+        <FlowerPicker
+          label={`Flower ${index + 1}`}
           value={flower.type}
-          onChange={(e) => set({ type: e.target.value as FlowerType, color: undefined, centerColor: undefined, petals: undefined })}
-        >
-          {FLOWER_TYPE_NAMES.map((t) => (
-            <option key={t} value={t}>
-              {FLOWER_LABELS[t]}
-            </option>
-          ))}
-        </select>
+          palette={palette}
+          color={flower.color}
+          onChange={(t) => set({ type: t, color: undefined, centerColor: undefined, petals: undefined })}
+        />
         <label className="range">
           <span>Size</span>
           <input type="range" min={0.5} max={1.6} step={0.05} value={flower.scale ?? 1} onChange={(e) => set({ scale: Number(e.target.value) })} />
@@ -175,6 +174,8 @@ export const Builder: React.FC = () => {
   const [count, setCount] = useState(1);
   const [status, setStatus] = useState('');
   const [playing, setPlaying] = useState(false);
+  const [active, setActive] = useState<number | null>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<PlayerRef>(null);
 
   const gift: BouquetProps = useMemo(
@@ -250,12 +251,16 @@ export const Builder: React.FC = () => {
   };
 
   const containerColor = CONTAINER_COLOR[draft.container];
+  const laid = useMemo(
+    () => layoutFlowers(draft.flowers, draft.palette, draft.container, draft.arrangement),
+    [draft.flowers, draft.palette, draft.container, draft.arrangement],
+  );
   const room = MAX_FLOWERS - draft.flowers.length;
 
   return (
     <main className="maker">
       <div className="maker__preview">
-        <div className="maker__stage">
+        <div className="maker__stage" ref={stageRef}>
           <Player
             ref={playerRef}
             component={BouquetComposition}
@@ -269,7 +274,19 @@ export const Builder: React.FC = () => {
             clickToPlay={false}
             initialFrame={FINISHED}
           />
+          {!playing && (
+            <DragHandles
+              stage={stageRef}
+              laid={laid}
+              container={draft.container}
+              arrangement={draft.arrangement}
+              active={active}
+              onStart={setActive}
+              onMove={(i, x, y) => setFlower(i, { ...draft.flowers[i], x, y })}
+            />
+          )}
         </div>
+        {!playing && <p className="hint maker__drag-hint">Drag the dots to move flowers.</p>}
         <button type="button" className="btn btn--ghost" onClick={play}>
           {playing ? 'Show the finished bouquet' : 'Play from the start'}
         </button>
@@ -335,6 +352,7 @@ export const Builder: React.FC = () => {
                 index={i}
                 flower={f}
                 palette={draft.palette}
+                active={active === i}
                 onChange={(nf) => setFlower(i, nf)}
                 onRemove={() => update({ flowers: draft.flowers.filter((_, j) => j !== i) })}
               />
@@ -359,20 +377,15 @@ export const Builder: React.FC = () => {
                 +
               </button>
             </div>
-            <select aria-label="Flower to add" value={adding} onChange={(e) => setAdding(e.target.value as FlowerType)}>
-              {FLOWER_TYPE_NAMES.map((t) => (
-                <option key={t} value={t}>
-                  {FLOWER_LABELS[t]}
-                </option>
-              ))}
-            </select>
+            <FlowerPicker label="Flower to add" value={adding} palette={draft.palette} onChange={setAdding} />
             <button
               type="button"
               className="btn btn--ghost"
               disabled={room === 0}
               onClick={() => {
                 const n = Math.min(count, room);
-                update({ flowers: [...draft.flowers, ...Array.from({ length: n }, () => ({ type: adding }))] });
+                const added = Array.from({ length: n }, (): FlowerSpec => ({ type: adding }));
+                update({ flowers: autoArrange([...draft.flowers, ...added], draft.arrangement, { keepPlaced: true }) });
                 setCount(1);
               }}
             >
@@ -382,7 +395,7 @@ export const Builder: React.FC = () => {
               type="button"
               className="btn btn--quiet"
               disabled={draft.flowers.length === 0}
-              onClick={() => update({ flowers: draft.flowers.map(({ x: _x, y: _y, ...f }) => f) })}
+              onClick={() => update({ flowers: autoArrange(draft.flowers, draft.arrangement) })}
             >
               Arrange for me
             </button>
