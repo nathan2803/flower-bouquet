@@ -172,6 +172,7 @@ const FlowerRow: React.FC<{
 export const Builder: React.FC = () => {
   const [draft, setDraft] = useState<Draft>(() => fromPreset('classic'));
   const [adding, setAdding] = useState<FlowerType>('rose');
+  const [count, setCount] = useState(1);
   const [status, setStatus] = useState('');
   const [playing, setPlaying] = useState(false);
   const playerRef = useRef<PlayerRef>(null);
@@ -249,6 +250,7 @@ export const Builder: React.FC = () => {
   };
 
   const containerColor = CONTAINER_COLOR[draft.container];
+  const room = MAX_FLOWERS - draft.flowers.length;
 
   return (
     <main className="maker">
@@ -340,6 +342,23 @@ export const Builder: React.FC = () => {
           </ol>
           {draft.flowers.length === 0 && <p className="hint">Add at least one flower.</p>}
           <div className="add-row">
+            <div className="stepper" role="group" aria-label="How many to add">
+              <button type="button" className="stepper__btn" aria-label="Fewer" disabled={count <= 1} onClick={() => setCount((c) => Math.max(1, c - 1))}>
+                −
+              </button>
+              <input
+                type="number"
+                aria-label="How many"
+                inputMode="numeric"
+                min={1}
+                max={room}
+                value={count}
+                onChange={(e) => setCount(Math.max(1, Math.min(room || 1, Math.round(Number(e.target.value) || 1))))}
+              />
+              <button type="button" className="stepper__btn" aria-label="More" disabled={count >= room} onClick={() => setCount((c) => Math.min(room, c + 1))}>
+                +
+              </button>
+            </div>
             <select aria-label="Flower to add" value={adding} onChange={(e) => setAdding(e.target.value as FlowerType)}>
               {FLOWER_TYPE_NAMES.map((t) => (
                 <option key={t} value={t}>
@@ -350,10 +369,14 @@ export const Builder: React.FC = () => {
             <button
               type="button"
               className="btn btn--ghost"
-              disabled={draft.flowers.length >= MAX_FLOWERS}
-              onClick={() => update({ flowers: [...draft.flowers, { type: adding }] })}
+              disabled={room === 0}
+              onClick={() => {
+                const n = Math.min(count, room);
+                update({ flowers: [...draft.flowers, ...Array.from({ length: n }, () => ({ type: adding }))] });
+                setCount(1);
+              }}
             >
-              Add flower
+              {room === 0 ? 'Bouquet is full' : count > 1 ? `Add ${Math.min(count, room)}` : 'Add flower'}
             </button>
             <button
               type="button"
