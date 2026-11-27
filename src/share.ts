@@ -1,11 +1,16 @@
 /**
  * A whole bouquet fits in its own link, so a gift needs no server or database.
  *
- * New links use `?b=`: the design packed into a few hundred bytes (see
- * `packGift`), then base64url. Older `?g=` links (base64url JSON) still open.
- * Links come from anyone, so everything read back is checked and clamped.
+ * Links use `?b=`: the design packed into a few hundred bytes (see
+ * `packGift`), then base64url. Links come from anyone, so everything read
+ * back is checked and clamped.
+ *
+ * Retiring links: every link carries a version byte, and only links of the
+ * current PACK_VERSION open. Older ones (and the old `?g=` and `?to=…` forms)
+ * show "This gift is no longer available". Bumping PACK_VERSION retires every
+ * link made so far; new links keep working.
  */
-import { DEFAULT_PALETTE, PRESETS, defaultBouquetProps, type PresetName } from './bouquet/config';
+import { DEFAULT_PALETTE, defaultBouquetProps } from './bouquet/config';
 import { FLOWER_TYPES } from './bouquet/flowers';
 import type { Arrangement, BouquetProps, ContainerType, FlowerSpec, FlowerType, Palette } from './bouquet/types';
 
@@ -15,43 +20,6 @@ const PALETTE_KEYS = Object.keys(DEFAULT_PALETTE) as (keyof Palette)[];
 export const MAX_FLOWERS = 24;
 export const MAX_MESSAGE = 140;
 
-const toBase64Url = (text: string) => {
-  const bytes = new TextEncoder().encode(text);
-  let bin = '';
-  bytes.forEach((b) => (bin += String.fromCharCode(b)));
-  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-};
-
-const fromBase64Url = (code: string) => {
-  const b64 = code.replace(/-/g, '+').replace(/_/g, '/');
-  const bin = atob(b64 + '='.repeat((4 - (b64.length % 4)) % 4));
-  return new TextDecoder().decode(Uint8Array.from(bin, (c) => c.charCodeAt(0)));
-};
-
-const round = (v: number | undefined) => (typeof v === 'number' ? Math.round(v * 100) / 100 : undefined);
-
-/** Encodes only what differs from the defaults, so links stay short. */
-export const encodeGift = (p: BouquetProps) => {
-  const palette: Partial<Palette> = {};
-  for (const k of PALETTE_KEYS) {
-    const v = p.palette?.[k];
-    if (v && v.toLowerCase() !== DEFAULT_PALETTE[k].toLowerCase()) palette[k] = v;
-  }
-  const data = {
-    to: p.recipientName,
-    from: p.senderName,
-    msg: p.message,
-    h: p.heading !== defaultBouquetProps.heading ? p.heading : undefined,
-    s: p.signoff !== defaultBouquetProps.signoff ? p.signoff : undefined,
-    c: p.container,
-    a: p.arrangement,
-    p: Object.keys(palette).length ? palette : undefined,
-    f: (p.flowers ?? []).map((f) => ({ ...f, x: round(f.x), y: round(f.y), scale: round(f.scale), tilt: round(f.tilt) })),
-  };
-  return toBase64Url(JSON.stringify(data));
-};
-
-const str = (v: unknown, max: number) => (typeof v === 'string' ? v.slice(0, max) : undefined);
 const num = (v: unknown, lo: number, hi: number) =>
   typeof v === 'number' && Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : undefined;
 const HEX = /^#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$/;
@@ -78,63 +46,9 @@ export const cleanFlower = (raw: unknown): FlowerSpec | null => {
   };
 };
 
-/** Reads `?g=…`. Returns null if the link has no design or it can't be read. */
-export const decodeGift = (code: string): BouquetProps | null => {
-  try {
-    const d = JSON.parse(fromBase64Url(code)) as Record<string, unknown>;
-    const palette = { ...DEFAULT_PALETTE };
-    if (d.p && typeof d.p === 'object') {
-      for (const k of PALETTE_KEYS) {
-        const v = (d.p as Record<string, unknown>)[k];
-        if (typeof v === 'string' && HEX.test(v)) palette[k] = v;
-      }
-    }
-    const flowers = Array.isArray(d.f) ? d.f.slice(0, MAX_FLOWERS).map(cleanFlower).filter((f): f is FlowerSpec => f !== null) : [];
-    return {
-      ...defaultBouquetProps,
-      recipientName: str(d.to, 40) || defaultBouquetProps.recipientName,
-      senderName: str(d.from, 40) || defaultBouquetProps.senderName,
-      message: str(d.msg, MAX_MESSAGE) ?? defaultBouquetProps.message,
-      heading: str(d.h, 60) ?? defaultBouquetProps.heading,
-      signoff: str(d.s, 30) ?? defaultBouquetProps.signoff,
-      container: oneOf(d.c, CONTAINERS) ?? 'wrap',
-      arrangement: oneOf(d.a, ARRANGEMENTS) ?? 'dome',
-      palette,
-      flowers: flowers.length ? flowers : defaultBouquetProps.flowers,
-    };
-  } catch {
-    return null;
-  }
-};
-
-/** Older simple links: `?to=Sam&from=Alex&msg=…&preset=lilyVase`. */
-export const giftFromSimpleParams = (q: URLSearchParams): BouquetProps => {
-  const name = q.get('preset') as PresetName | null;
-  const preset = name && PRESETS[name] ? (({ title: _t, ...rest }) => rest)(PRESETS[name]) : {};
-  return {
-    ...defaultBouquetProps,
-    ...preset,
-    recipientName: q.get('to')?.slice(0, 40) || defaultBouquetProps.recipientName,
-    senderName: q.get('from')?.slice(0, 40) || defaultBouquetProps.senderName,
-    message: q.get('msg')?.slice(0, MAX_MESSAGE) || defaultBouquetProps.message,
-    heading: q.get('heading')?.slice(0, 60) || defaultBouquetProps.heading,
-  };
-};
-
-/** The gift a link points at, or null when it's the plain site (show the maker). */
-export const giftFromUrl = (search: string): BouquetProps | null => {
-  const q = new URLSearchParams(search);
-  const packed = q.get('b');
-  if (packed) return unpackGift(packed) ?? { ...defaultBouquetProps };
-  const code = q.get('g');
-  if (code) return decodeGift(code) ?? { ...defaultBouquetProps };
-  if (['to', 'from', 'msg', 'preset', 'frame'].some((k) => q.has(k))) return giftFromSimpleParams(q);
-  return null;
-};
-
 // ---------- packed links (`?b=`) ----------
 //
-// Layout (version 1):
+// Layout (versions 1 and 2 are identical; 1 is retired):
 //   u8 version · u8 container<<5 | arrangement<<2 | hasHeading<<1 | hasSignoff
 //   u16 changed-palette mask, then 3 bytes per changed colour
 //   strings (varint length + UTF-8): to, from, message, [heading], [signoff]
@@ -144,7 +58,11 @@ export const giftFromUrl = (search: string): BouquetProps | null => {
 //   (tilt in degrees), scale as u8 hundredths, petals/leaves/delay as u8.
 //
 // These lists only ever grow at the end: reordering them breaks old links.
-const PACK_VERSION = 1;
+/**
+ * The only link version that opens. 1 was retired on 28 Nov 2026. To retire
+ * every link made so far again, add 1 (and update tests/share.test.ts).
+ */
+export const PACK_VERSION = 2;
 const PACK_TYPES: FlowerType[] = [
   'rose', 'tulip', 'daisy', 'ranunculus', 'lily', 'peony', 'sunflower', 'carnation', 'cosmos', 'hydrangea', 'anemone',
   'eucalyptus', 'babysBreath', 'lavender', 'fern', 'forgetMeNot', 'berries',
@@ -304,26 +222,47 @@ export const unpackGift = (code: string): BouquetProps | null => {
   }
 };
 
-/**
- * Reads a pasted gift link strictly: the design it holds, or null if the
- * text isn't a gift link this site can read (no falling back to defaults).
- */
-export const readGiftLink = (text: string): BouquetProps | null => {
-  let q: URLSearchParams;
-  try {
-    q = new URL(text.trim(), window.location.href).searchParams;
-  } catch {
-    return null;
-  }
+/** What a link holds: nothing (show the maker), a gift, a retired gift, or a broken link. */
+export type LinkRead =
+  | { kind: 'maker' }
+  | { kind: 'gift'; gift: BouquetProps }
+  | { kind: 'retired' }
+  | { kind: 'broken' };
+
+/** Query parameters of the old link forms, all retired. */
+const OLD_FORMS = ['g', 'to', 'from', 'msg', 'preset', 'heading'];
+
+export const readLink = (search: string): LinkRead => {
+  const q = new URLSearchParams(search);
   const packed = q.get('b');
-  if (packed) return unpackGift(packed);
-  const code = q.get('g');
-  if (code) return decodeGift(code);
-  if (['to', 'from', 'msg', 'preset'].some((k) => q.has(k))) return giftFromSimpleParams(q);
-  return null;
+  if (packed) {
+    let version = -1;
+    try {
+      version = base64UrlToBytes(packed)[0] ?? -1;
+    } catch {
+      /* not base64 at all */
+    }
+    if (version >= 1 && version < PACK_VERSION) return { kind: 'retired' };
+    const gift = unpackGift(packed);
+    return gift ? { kind: 'gift', gift } : { kind: 'broken' };
+  }
+  if (OLD_FORMS.some((k) => q.has(k))) return { kind: 'retired' };
+  return { kind: 'maker' };
 };
+
+/** Reads a link pasted as text (a whole URL, or just the `?b=…` part). */
+export const readPastedLink = (text: string): LinkRead => {
+  try {
+    return readLink(new URL(text.trim(), 'https://example.invalid/').search);
+  } catch {
+    return { kind: 'broken' };
+  }
+};
+
+/** The `?b=` code of a gift, without the site address. */
+export const giftCode = (p: BouquetProps) => bytesToBase64Url(packGift(p));
 
 export const giftLink = (p: BouquetProps) => {
   const base = `${window.location.origin}${window.location.pathname}`;
-  return `${base}?b=${bytesToBase64Url(packGift(p))}`;
+  return `${base}?b=${giftCode(p)}`;
 };

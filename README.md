@@ -50,7 +50,23 @@ with the link can see the note. Whoever opens it gets the **Tap to open** gift.
 
 Links are packed into a small binary format (`packGift` in `share.ts`), about a quarter of the
 length of the old JSON links; a typical gift link is around 230 characters, most of it the
-message. Old `?g=…` links still open.
+message. Add `&frame=400` to a gift link to open it on a still frame.
+
+### Gifts you've sent
+
+Every gift whose link leaves the maker (copied, shared, QR code, image, or opened) is listed
+under **Gifts you've sent**, newest first, with **Copy link**, **Edit** and **Remove**. The list
+lives in this browser only (localStorage). It can't tell whether a gift was opened, since there's
+no server, and gifts sent before 28 Nov 2026 aren't in it.
+
+### Taking links down
+
+Every link carries a version number, and only the current one (`PACK_VERSION` in `share.ts`)
+opens. Older links show **This gift is no longer available**. On 28 Nov 2026 every link made
+until then was retired this way: version 1 `?b=` links and the older `?g=…` and
+`?to=…&preset=…` forms. To retire every link made so far again, add 1 to `PACK_VERSION`, update
+the frozen links in `tests/share.test.ts`, and deploy. A retired link still exists in people's
+chats, and its note is still inside the link text; the site just won't show it.
 
 ### QR code
 
@@ -65,20 +81,15 @@ colours kept light so a camera can't mistake it for a corner eye. It was checked
 browser's barcode reader across every preset, 11 flower types × 8 colours, long and short
 messages, at sizes from 320 to 1600 px and with blur. Still, scan your own before printing.
 
-The short form still works for quick links:
-`?to=Sam&from=Alex&msg=Happy%20birthday!&preset=lilyVase` (presets: `classic`, `blush`, `sunday`,
-`lavender`, `sunflowerBasket`, `lilyVase`, `peonyBox`, `wildflowerPosy`, `blueSkies`). Add `&frame=400` to open on
-a still frame.
-
 ## Tests
 
 ```bash
 npm test
 ```
 
-`tests/share.test.ts` holds real gift links frozen at the time they were made and checks they
-still open the same gift. It runs before every deploy, so a change that would break links people
-have already sent stops the deploy instead of the gifts.
+`tests/share.test.ts` holds real gift links frozen at the time they were made. It checks that
+current links still open the same gift and that retired links stay taken down. It runs before
+every deploy, so a change that would alter links people already have stops the deploy instead.
 
 ## Hosting on GitHub Pages
 
@@ -160,7 +171,8 @@ flowers are drawn in front.
 
 ### Presets
 
-`PRESETS` in `config.ts` holds nine ready-made compositions. Use one in a link (`?preset=peonyBox`),
+`PRESETS` in `config.ts` holds nine ready-made compositions (`classic`, `blush`, `sunday`, `lavender`,
+`sunflowerBasket`, `lilyVase`, `peonyBox`, `wildflowerPosy`, `blueSkies`). Pick one in the maker, use one
 in code (`{ ...defaultBouquetProps, ...PRESETS.peonyBox }`), or copy one as the starting point for your own.
 
 ## Rendering an MP4 with your text
@@ -188,7 +200,8 @@ src/
   Builder.tsx              The maker page: live preview, flower list, colours, Copy link
   Gift.tsx                 Gift page: cover, music, breeze, endless hold
   share.ts                 Packs a design into the link and reads it back safely
-  maker/                   Pickers, drag handles, QR code, saved draft, Save as image
+  maker/                   Pickers, drag handles, QR code, saved draft, Save as image, sent list
+  Unavailable.tsx          The page for retired or broken links
 tests/share.test.ts        Frozen links that must keep opening
   audio/musicBox.ts        Web Audio music box and breeze whoosh
   remotion/Root.tsx        Compositions (Bouquet, Bouquet-breeze, one per preset)

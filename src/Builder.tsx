@@ -15,7 +15,9 @@ import { FlowerPicker } from './maker/FlowerPicker';
 import { qrLook } from './maker/qr';
 import { QrCode, qrCardPng } from './maker/QrCode';
 import { bouquetImage } from './maker/snapshot';
-import { MAX_FLOWERS, MAX_MESSAGE, giftLink, readGiftLink } from './share';
+import { SentList } from './maker/SentList';
+import { loadSent, recordSent, type SentHow } from './maker/sent';
+import { MAX_FLOWERS, MAX_MESSAGE, giftLink, readPastedLink } from './share';
 import { clearDraft, draftFromGift, loadDraft, saveDraft, type Draft } from './maker/draft';
 
 /** The frame the preview rests on: everything open, card showing. */
@@ -177,6 +179,7 @@ export const Builder: React.FC = () => {
   const [undo, setUndo] = useState<{ label: string; draft: Draft } | null>(null);
   const [fixLink, setFixLink] = useState('');
   const [fixError, setFixError] = useState('');
+  const [sent, setSent] = useState(loadSent);
   const [adding, setAdding] = useState<FlowerType>('rose');
   /** Colour for flowers about to be added; undefined = the flower's natural colour. */
   const [addColor, setAddColor] = useState<string | undefined>(undefined);
@@ -206,6 +209,8 @@ export const Builder: React.FC = () => {
   const link = useMemo(() => giftLink(gift), [gift]);
   const look = useMemo(() => qrLook(gift), [gift]);
   const ready = draft.recipientName.trim() !== '' && draft.senderName.trim() !== '' && draft.flowers.length > 0;
+  /** Note a gift in "Gifts you've sent" once its link leaves the maker. */
+  const track = (how: SentHow) => ready && setSent(recordSent(gift, how));
 
   useEffect(() => {
     document.title = 'Make a bouquet';
@@ -236,14 +241,18 @@ export const Builder: React.FC = () => {
 
   const openFix = (e: React.FormEvent) => {
     e.preventDefault();
-    const sent = readGiftLink(fixLink);
-    if (!sent) {
-      setFixError('That doesn’t look like a gift link from this site. Paste the whole link you sent.');
+    const read = readPastedLink(fixLink);
+    if (read.kind !== 'gift') {
+      setFixError(
+        read.kind === 'retired'
+          ? 'That gift was taken down, so it can’t be opened any more.'
+          : 'That doesn’t look like a gift link from this site. Paste the whole link you sent.',
+      );
       return;
     }
     setFixError('');
     setFixLink('');
-    replaceDraft(draftFromGift(sent), `Opened the gift for ${sent.recipientName}.`);
+    replaceDraft(draftFromGift(read.gift), `Opened the gift for ${read.gift.recipientName}.`);
   };
 
   // Rest the preview on the finished bouquet; "Play from the start" runs the whole thing.
@@ -284,6 +293,7 @@ export const Builder: React.FC = () => {
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(link);
+      track('link');
       setStatus('Link copied. Paste it into a message to send your bouquet.');
     } catch {
       setStatus('Couldn’t copy automatically. Select the link below and copy it.');
@@ -293,6 +303,7 @@ export const Builder: React.FC = () => {
   const share = async () => {
     try {
       await navigator.share({ title: `A bouquet for ${gift.recipientName}`, text: `I made you something 💐`, url: link });
+      track('share');
     } catch {
       /* closed the share sheet */
     }
@@ -324,9 +335,10 @@ export const Builder: React.FC = () => {
       // Phones: the share sheet has "Save image". Computers: a normal download.
       const touch = navigator.maxTouchPoints > 0;
       if (touch && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], title: `A bouquet for ${gift.recipientName}` }).catch(() => undefined);
+        await navigator.share({ files: [file], title: `A bouquet for ${gift.recipientName}` }).then(() => track('image'), () => undefined);
       } else {
         download(file);
+        track('image');
         setStatus('Image saved: 1080 × 1920, ready for a story or status.');
       }
     } catch {
@@ -339,6 +351,7 @@ export const Builder: React.FC = () => {
   const downloadQr = async () => {
     try {
       download(await qrFile());
+      track('qr');
       setStatus('QR code saved. Print it, or send the picture.');
     } catch {
       setStatus('Couldn’t save the QR code. Try again, or take a screenshot of it.');
@@ -350,6 +363,7 @@ export const Builder: React.FC = () => {
       const file = await qrFile();
       if (!navigator.canShare?.({ files: [file] })) return downloadQr();
       await navigator.share({ files: [file], title: `A bouquet for ${gift.recipientName}` });
+      track('qr');
     } catch {
       /* closed the share sheet */
     }
@@ -615,7 +629,14 @@ export const Builder: React.FC = () => {
             <button type="button" className="btn btn--ghost" onClick={saveImage} disabled={saving}>
               {saving ? 'Making the image…' : 'Save as image'}
             </button>
-            <a className={`btn btn--quiet ${ready ? '' : 'is-disabled'}`} href={ready ? link : undefined} target="_blank" rel="noreferrer" aria-disabled={!ready}>
+            <a
+              className={`btn btn--quiet ${ready ? '' : 'is-disabled'}`}
+              href={ready ? link : undefined}
+              target="_blank"
+              rel="noreferrer"
+              aria-disabled={!ready}
+              onClick={() => track('opened')}
+            >
               Open the gift
             </a>
           </div>
@@ -654,6 +675,15 @@ export const Builder: React.FC = () => {
             </div>
           )}
         </section>
+
+        <SentList
+          sent={sent}
+          onChange={setSent}
+          onEdit={(g) => {
+            replaceDraft(draftFromGift(g), `Opened the gift for ${g.recipientName}.`);
+            window.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+          }}
+        />
       </div>
     </main>
   );

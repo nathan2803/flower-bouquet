@@ -1,19 +1,22 @@
 /**
- * Gift links people have already sent must keep opening the same gift.
+ * Gift links that are out in the world.
  *
- * The links below were made by the site and are frozen here. If one of these
- * tests fails, a change has broken links that are out in the world: change
- * the code back, or add a new link version and keep reading the old one.
+ * The links below were made by the site and are frozen here:
+ *  - current links (version 2) must keep opening the same gift;
+ *  - retired links (version 1 `?b=`, `?g=` and `?to=…`, taken down on
+ *    28 Nov 2026) must keep showing "no longer available".
+ * If one of these tests fails, a change has altered links people already
+ * have: change the code back, or retire links on purpose (PACK_VERSION).
  *
- * Things that quietly break links without touching share.ts:
+ * Things that quietly change current links without touching share.ts:
  *  - DEFAULT_PALETTE, and the default heading and sign-off: links only store
- *    what differs from them, so changing a default changes old gifts.
+ *    what differs from them, so changing a default changes those gifts.
  *  - Reordering flower types, containers, arrangements or palette keys.
  */
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_PALETTE, PRESETS, defaultBouquetProps } from '../src/bouquet/config';
 import type { BouquetProps } from '../src/bouquet/types';
-import { decodeGift, encodeGift, giftFromSimpleParams, giftFromUrl, packGift, unpackGift } from '../src/share';
+import { PACK_VERSION, packGift, readLink, readPastedLink, unpackGift } from '../src/share';
 
 const b64 = (u: Uint8Array) => Buffer.from(u).toString('base64url');
 
@@ -30,10 +33,10 @@ const tidy = (v: unknown): unknown => {
   return typeof v === 'string' && /^#[0-9a-f]{3,6}$/i.test(v) ? v.toLowerCase() : v;
 };
 
-// ---- frozen links (v1 `?b=`, made 28 Nov 2026) ----
+// ---- current links (version 2, made 28 Nov 2026) ----
 
 const SIMPLE_B =
-  'AQAAAAZBbWVsaWEEVGhlb0RIYXBweSBiaXJ0aGRheSEgVGhhbmsgeW91IGZvciBtYWtpbmcgb3JkaW5hcnkgZGF5cyBmZWVsIGxpa2Ugc3ByaW5nLgYBYwCePgFnAGJCXwGDAMRaAYMAQlYBhwAFZlUAIwkC3FQ';
+  'AgAAAAZBbWVsaWEEVGhlb0RIYXBweSBiaXJ0aGRheSEgVGhhbmsgeW91IGZvciBtYWtpbmcgb3JkaW5hcnkgZGF5cyBmZWVsIGxpa2Ugc3ByaW5nLgYBYwCePgFnAGJCXwGDAMRaAYMAQlYBhwAFZlUAIwkC3FQ';
 
 const SIMPLE: BouquetProps = {
   ...defaultBouquetProps,
@@ -56,7 +59,7 @@ const SIMPLE: BouquetProps = {
 };
 
 const EVERYTHING_B =
-  'AU8AgfP2-l5_uARab8OrClNhbSAmIEFsZXgiRsO8ciBkaWNoIOKcvyDigJQgaGFwcHkgMzB0aCEg8J-SkBdmb3IgbXkgZmF2b3VyaXRlIHBlcnNvbgxhbGwgbXkgbG92ZSwDAV_9ASwqSgMHAs70ffEMAgMAWjIAwwjytjIKPA';
+  'Ak8AgfP2-l5_uARab8OrClNhbSAmIEFsZXgiRsO8ciBkaWNoIOKcvyDigJQgaGFwcHkgMzB0aCEg8J-SkBdmb3IgbXkgZmF2b3VyaXRlIHBlcnNvbgxhbGwgbXkgbG92ZSwDAV_9ASwqSgMHAs70ffEMAgMAWjIAwwjytjIKPA';
 
 /** Every field a link can carry: unicode text, custom lines, palette, all flower options. */
 const EVERYTHING: BouquetProps = {
@@ -76,43 +79,53 @@ const EVERYTHING: BouquetProps = {
   ],
 };
 
-/** The same gift in the older JSON format (`?g=`), sent before November 2026. */
-const EVERYTHING_G =
+// ---- retired links (taken down 28 Nov 2026) ----
+
+const RETIRED_V1 =
+  'AQAAAAZBbWVsaWEEVGhlb0RIYXBweSBiaXJ0aGRheSEgVGhhbmsgeW91IGZvciBtYWtpbmcgb3JkaW5hcnkgZGF5cyBmZWVsIGxpa2Ugc3ByaW5nLgYBYwCePgFnAGJCXwGDAMRaAYMAQlYBhwAFZlUAIwkC3FQ';
+
+/** The older JSON format. */
+const RETIRED_G =
   'eyJ0byI6Ilpvw6siLCJmcm9tIjoiU2FtICYgQWxleCIsIm1zZyI6IkbDvHIgZGljaCDinL8g4oCUIGhhcHB5IDMwdGghIPCfkpAiLCJoIjoiZm9yIG15IGZhdm91cml0ZSBwZXJzb24iLCJzIjoiYWxsIG15IGxvdmUsIiwiYyI6InZhc2UiLCJhIjoiY2FzY2FkZSIsInAiOnsiYmFja2dyb3VuZCI6IiNGM0Y2RkEiLCJyaWJib24iOiIjNUU3RkI4In0sImYiOlt7InR5cGUiOiJhbmVtb25lIiwiY29sb3IiOiJyb3NlIiwiY2VudGVyQ29sb3IiOiIjMkMyQTRBIiwic3RlbUNvbG9yIjoic2FnZSIsInBldGFscyI6NywibGVhdmVzIjoyLCJ4IjotMC41LCJ5IjotMC4xMiwic2NhbGUiOjEuMjUsInRpbHQiOi0xNSwiZGVsYXkiOjEyfSx7InR5cGUiOiJiZXJyaWVzIiwieCI6MC45LCJ5IjowLjV9LHsidHlwZSI6InN1bmZsb3dlciIsImNvbG9yIjoiI0YyQjYzMiIsIngiOjAuMSwieSI6MC42fV19';
 
-describe('links already sent still open the same gift', () => {
-  it('reads a simple ?b= link', () => {
+describe('current links open the same gift', () => {
+  it('reads a simple link', () => {
     expect(tidy(unpackGift(SIMPLE_B))).toEqual(tidy(SIMPLE));
   });
 
-  it('reads a ?b= link that uses every field', () => {
+  it('reads a link that uses every field', () => {
     expect(tidy(unpackGift(EVERYTHING_B))).toEqual(tidy(EVERYTHING));
   });
 
-  it('reads an old ?g= link', () => {
-    expect(tidy(decodeGift(EVERYTHING_G))).toEqual(tidy(EVERYTHING));
+  it('routes them from the address bar and from pasted text', () => {
+    expect(PACK_VERSION).toBe(2);
+    const read = readLink(`?b=${SIMPLE_B}&frame=400`);
+    expect(read.kind).toBe('gift');
+    expect(read.kind === 'gift' && tidy(read.gift)).toEqual(tidy(SIMPLE));
+    expect(readPastedLink(`https://nathan2803.github.io/flower-bouquet/?b=${EVERYTHING_B}`).kind).toBe('gift');
+    expect(readLink('').kind).toBe('maker');
+  });
+});
+
+describe('retired links stay taken down', () => {
+  it.each([
+    ['a version 1 link', `?b=${RETIRED_V1}`],
+    ['a ?g= link', `?g=${RETIRED_G}`],
+    ['a ?to=…&preset= link', '?to=Sam&from=Alex&msg=Happy%20birthday!&preset=lilyVase'],
+    ['a ?preset= link', '?preset=classic'],
+  ])('%s', (_name, search) => {
+    expect(readLink(search).kind).toBe('retired');
+    expect(readPastedLink(`https://nathan2803.github.io/flower-bouquet/${search}`).kind).toBe('retired');
   });
 
-  it('reads the simple ?to=&preset= form', () => {
-    const g = giftFromSimpleParams(new URLSearchParams('to=Sam&from=Alex&msg=Happy%20birthday!&preset=lilyVase'));
-    expect(g.recipientName).toBe('Sam');
-    expect(g.senderName).toBe('Alex');
-    expect(g.message).toBe('Happy birthday!');
-    expect(g.container).toBe('vase');
-    expect(g.arrangement).toBe('tall');
-  });
-
-  it('routes each link form from the address bar', () => {
-    expect(tidy(giftFromUrl(`?b=${SIMPLE_B}`))).toEqual(tidy(SIMPLE));
-    expect(tidy(giftFromUrl(`?g=${EVERYTHING_G}`))).toEqual(tidy(EVERYTHING));
-    expect(giftFromUrl('?to=Sam')?.recipientName).toBe('Sam');
-    expect(giftFromUrl('')).toBeNull();
+  it('cannot be read as a gift any more', () => {
+    expect(unpackGift(RETIRED_V1)).toBeNull();
   });
 });
 
 describe('new links', () => {
   it('are made the same way as before', () => {
-    // Not required for old links to open, but a change here means new links
+    // Not required for links to open, but a change here means new links
     // look different; make sure that's on purpose.
     expect(b64(packGift(SIMPLE))).toBe(SIMPLE_B);
     expect(b64(packGift(EVERYTHING))).toBe(EVERYTHING_B);
@@ -126,29 +139,28 @@ describe('new links', () => {
   });
 
   it('stay far shorter than the old JSON links', () => {
-    expect(b64(packGift(EVERYTHING)).length).toBeLessThan(EVERYTHING_G.length / 2);
+    expect(EVERYTHING_B.length).toBeLessThan(RETIRED_G.length / 2);
   });
 });
 
 describe('links from anyone are read safely', () => {
-  it('rejects garbage without throwing', () => {
-    expect(unpackGift('')).toBeNull();
-    expect(unpackGift('not a link!')).toBeNull();
-    expect(unpackGift('AQAAAA')).toBeNull(); // cut off part-way
-    expect(decodeGift('%%%')).toBeNull();
-  });
-
-  it('opens a default bouquet for an unreadable link instead of the maker', () => {
-    expect(giftFromUrl('?b=zzzz')?.recipientName).toBe(defaultBouquetProps.recipientName);
+  it('calls garbage a broken link without throwing', () => {
+    for (const code of ['', 'not a link!', 'zzzz', 'AgAAAA']) {
+      expect(unpackGift(code)).toBeNull();
+      if (code) expect(readLink(`?b=${encodeURIComponent(code)}`).kind).toBe('broken');
+    }
+    expect(readPastedLink('hello there').kind).toBe('maker');
   });
 
   it('clamps what it reads', () => {
-    const wild = encodeGift({
-      ...EVERYTHING,
-      recipientName: 'x'.repeat(500),
-      flowers: Array.from({ length: 80 }, () => ({ type: 'rose' as const, scale: 99, x: 50, tilt: 400 })),
-    });
-    const g = decodeGift(wild)!;
+    const wild = b64(
+      packGift({
+        ...EVERYTHING,
+        recipientName: 'x'.repeat(500),
+        flowers: Array.from({ length: 80 }, () => ({ type: 'rose' as const, scale: 99, x: 50, tilt: 400 })),
+      }),
+    );
+    const g = unpackGift(wild)!;
     expect(g.recipientName.length).toBe(40);
     expect(g.flowers!.length).toBe(24);
     expect(g.flowers![0]).toMatchObject({ scale: 2.5, x: 1.2, tilt: 90 });

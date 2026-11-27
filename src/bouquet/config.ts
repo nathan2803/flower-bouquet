@@ -71,7 +71,7 @@ type Preset = Pick<BouquetProps, 'palette' | 'flowers' | 'container' | 'arrangem
 
 /**
  * Ready-made compositions. Spread one into your props:
- * `{ ...props, ...PRESETS.lilyVase }`, or use `?preset=lilyVase` in the link.
+ * `{ ...props, ...PRESETS.lilyVase }`, or pick one in the maker.
  */
 export const PRESETS: Record<PresetName, Preset> = {
   classic: { title: 'Classic wrap', container: 'wrap', arrangement: 'dome', palette: DEFAULT_PALETTE, flowers: DEFAULT_FLOWERS },

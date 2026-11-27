@@ -1,18 +1,21 @@
 import React, { useMemo } from 'react';
 import { Builder } from './Builder';
 import { Gift } from './Gift';
-import { giftFromUrl } from './share';
+import { readLink } from './share';
+import { Unavailable } from './Unavailable';
 
 /**
- * The plain site URL opens the maker. A gift link (`?g=…`, or the simple
- * `?to=…&preset=…` form) opens the gift itself.
+ * The plain site URL opens the maker. A gift link (`?b=…`) opens the gift.
+ * Retired links (older versions, `?g=…`, `?to=…`) say the gift is no longer
+ * available; links that can't be read say so too.
  */
 export const App: React.FC = () => {
-  const { gift, still } = useMemo(() => {
+  const { link, still } = useMemo(() => {
     const q = new URLSearchParams(window.location.search);
     const frame = Number(q.get('frame'));
-    return { gift: giftFromUrl(window.location.search), still: Number.isFinite(frame) && frame > 0 ? frame : null };
+    return { link: readLink(window.location.search), still: Number.isFinite(frame) && frame > 0 ? frame : null };
   }, []);
-  if (!gift) return <Builder />;
-  return <Gift gift={gift} still={still} />;
+  if (link.kind === 'maker') return <Builder />;
+  if (link.kind === 'gift') return <Gift gift={link.gift} still={still} />;
+  return <Unavailable reason={link.kind} />;
 };

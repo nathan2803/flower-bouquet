@@ -1150,3 +1150,136 @@ a.btn--quiet {
   color: #9b3b47;
   font-weight: 600;
 }
+
+/* ---------- retired or broken gift links ---------- */
+.unavailable__seal {
+  color: var(--ink-soft);
+  opacity: 0.45;
+}
+
+.unavailable__title {
+  margin: 0;
+  max-width: 14ch;
+  font-weight: 500;
+  font-size: clamp(30px, 4.6vh, 46px);
+  line-height: 1.1;
+  text-wrap: balance;
+}
+
+.unavailable__body {
+  margin: 0;
+  max-width: 30ch;
+  color: var(--ink-soft);
+  font-size: clamp(16px, 2.1vh, 19px);
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+/* ---------- gifts you've sent ---------- */
+.sent__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sent__item {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 253, 251, 0.7);
+}
+
+.sent__item.is-retired {
+  background: transparent;
+}
+
+.sent__item.is-retired .thumb,
+.sent__item.is-retired .sent__main {
+  opacity: 0.55;
+}
+
+.sent__main {
+  min-width: 0;
+}
+
+.sent__main p {
+  margin: 0;
+}
+
+.sent__to {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  font-size: 19px;
+  font-weight: 500;
+}
+
+.sent__status {
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: #e3eddf;
+  color: #3f5a3a;
+  font-family: system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.sent__status--down {
+  background: var(--paper-deep);
+  color: var(--ink-soft);
+}
+
+.sent__msg {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+.sent__meta {
+  color: var(--ink-soft);
+  font-size: 12.5px;
+}
+
+.sent__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.sent__actions .btn {
+  min-height: 34px;
+  font-size: 14px;
+}
+
+@media (max-width: 520px) {
+  .sent__item {
+    grid-template-columns: 44px minmax(0, 1fr);
+  }
+
+  .sent__item .thumb {
+    width: 44px;
+    height: 44px;
+  }
+
+  .sent__actions {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    margin-left: 46px;
+  }
+
+  .sent__actions .btn {
+    min-height: 44px;
+  }
+}
