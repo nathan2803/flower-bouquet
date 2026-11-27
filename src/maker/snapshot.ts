@@ -1,6 +1,6 @@
 /**
- * "Save as image": the finished bouquet as a 1080 × 1920 PNG, the size of a
- * phone story. It copies the preview's own SVG layers onto a canvas, with
+ * "Save as image": the finished bouquet as a 1080 × 1920 JPEG, the size of a
+ * phone story. (JPEG, not PNG: the paper grain makes a PNG about 4 MB.) It copies the preview's own SVG layers onto a canvas, with
  * the fonts embedded so the heading and the handwriting come out right
  * (an SVG drawn as an image can't load fonts from the page).
  */
@@ -84,8 +84,8 @@ const draw = async (ctx: CanvasRenderingContext2D, svg: SVGSVGElement, css: stri
   }
 };
 
-/** Draws every full-size SVG layer inside `stage`, back to front, into a PNG. */
-export const bouquetPng = async (stage: HTMLElement): Promise<Blob> => {
+/** Draws every full-size SVG layer inside `stage`, back to front, into a JPEG. */
+export const bouquetImage = async (stage: HTMLElement): Promise<Blob> => {
   const layers = [...stage.querySelectorAll<SVGSVGElement>(`svg[viewBox="0 0 ${VIDEO.width} ${VIDEO.height}"]`)];
   if (!layers.length) throw new Error('No bouquet to draw');
   const css = await fontCss();
@@ -97,6 +97,6 @@ export const bouquetPng = async (stage: HTMLElement): Promise<Blob> => {
   ctx.fillRect(0, 0, VIDEO.width, VIDEO.height);
   for (const svg of layers) await draw(ctx, svg, css);
   return new Promise<Blob>((resolve, reject) =>
-    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Could not draw the image'))), 'image/png'),
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Could not draw the image'))), 'image/jpeg', 0.92),
   );
 };

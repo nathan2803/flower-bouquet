@@ -37,7 +37,7 @@ Open the site. The main page is the **maker**:
    and (for some) petals and centre colour.
 4. Set the ribbon, container and other colours.
 5. Tap **Copy gift link** (or **Share…** on a phone) and send it, or **Download QR code** to print
-   it on a card. **Save as image** makes a 1080 × 1920 picture of the finished bouquet for a
+   it on a card. **Save as image** makes a 1080 × 1920 JPEG of the finished bouquet for a
    story or status.
 
 Your bouquet is saved in this browser as you go (localStorage, nothing is uploaded), so a

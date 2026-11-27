@@ -14,7 +14,7 @@ import { DragHandles } from './maker/DragHandles';
 import { FlowerPicker } from './maker/FlowerPicker';
 import { qrLook } from './maker/qr';
 import { QrCode, qrCardPng } from './maker/QrCode';
-import { bouquetPng } from './maker/snapshot';
+import { bouquetImage } from './maker/snapshot';
 import { MAX_FLOWERS, MAX_MESSAGE, giftLink, readGiftLink } from './share';
 import { clearDraft, draftFromGift, loadDraft, saveDraft, type Draft } from './maker/draft';
 
@@ -298,8 +298,8 @@ export const Builder: React.FC = () => {
     }
   };
 
-  const fileName = (suffix = '') =>
-    `bouquet-for-${gift.recipientName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'you'}${suffix}.png`;
+  const fileName = (suffix = '', ext = 'png') =>
+    `bouquet-for-${gift.recipientName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'you'}${suffix}.${ext}`;
 
   const qrFile = async () => new File([await qrCardPng(qrRef.current!, gift, FONTS)], fileName('-qr'), { type: 'image/png' });
 
@@ -320,7 +320,7 @@ export const Builder: React.FC = () => {
       if (player.isPlaying()) player.pause();
       player.seekTo(FINISHED);
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-      const file = new File([await bouquetPng(stageRef.current)], fileName(), { type: 'image/png' });
+      const file = new File([await bouquetImage(stageRef.current)], fileName('', 'jpg'), { type: 'image/jpeg' });
       // Phones: the share sheet has "Save image". Computers: a normal download.
       const touch = navigator.maxTouchPoints > 0;
       if (touch && navigator.canShare?.({ files: [file] })) {
