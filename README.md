@@ -27,7 +27,8 @@ npm run build     # static site in dist/
 
 Open the site. The main page is the **maker**:
 
-1. Type who it's to, who it's from, and your message.
+1. Type who it's to, who it's from, and your message. You can also change the line above their
+   name and the sign-off before yours (left blank, it stays “with love,”).
 2. Pick a ready-made mix, a holder (paper wrap, basket, vase, hatbox, hand-tied) and a shape.
 3. Add flowers from the picture picker (pick a number to add several at once), remove and
    recolour them. **Drag the dots on the preview** to move a flower, or focus a dot and use the
@@ -60,7 +61,7 @@ messages, at sizes from 320 to 1600 px and with blur. Still, scan your own befor
 
 The short form still works for quick links:
 `?to=Sam&from=Alex&msg=Happy%20birthday!&preset=lilyVase` (presets: `classic`, `blush`, `sunday`,
-`lavender`, `sunflowerBasket`, `lilyVase`, `peonyBox`, `wildflowerPosy`). Add `&frame=400` to open on
+`lavender`, `sunflowerBasket`, `lilyVase`, `peonyBox`, `wildflowerPosy`, `blueSkies`). Add `&frame=400` to open on
 a still frame.
 
 ## Hosting on GitHub Pages
@@ -143,7 +144,7 @@ flowers are drawn in front.
 
 ### Presets
 
-`PRESETS` in `config.ts` holds eight ready-made compositions. Use one in a link (`?preset=peonyBox`),
+`PRESETS` in `config.ts` holds nine ready-made compositions. Use one in a link (`?preset=peonyBox`),
 in code (`{ ...defaultBouquetProps, ...PRESETS.peonyBox }`), or copy one as the starting point for your own.
 
 ## Rendering an MP4 with your text

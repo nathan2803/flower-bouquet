@@ -73,7 +73,13 @@ export const NoteCard: React.FC<NoteCardProps> = ({ palette: pal, bow, softId, r
         );
       })}
 
-      <text x={304} y={160} textAnchor="end" fill={pal.ink} opacity={fromO}>
+      {/* A long sign-off shrinks the whole line so it stays on the card. */}
+      <text
+        textAnchor="end"
+        fill={pal.ink}
+        opacity={fromO}
+        transform={`translate(304 160) scale(${sc(Math.min(1, 600 / (signoff.length * 14.5 + 14 + senderName.length * 26)))})`}
+      >
         <tspan fontFamily={FONTS.serif} fontStyle="italic" fontSize={30} fillOpacity={0.68}>
           {signoff}
         </tspan>

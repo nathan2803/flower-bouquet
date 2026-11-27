@@ -19,7 +19,7 @@ import { MAX_FLOWERS, MAX_MESSAGE, giftLink } from './share';
 /** The frame the preview rests on: everything open, card showing. */
 const FINISHED = 400;
 
-type Draft = Required<Pick<BouquetProps, 'recipientName' | 'senderName' | 'message' | 'heading' | 'container' | 'arrangement' | 'flowers'>> & {
+type Draft = Required<Pick<BouquetProps, 'recipientName' | 'senderName' | 'message' | 'heading' | 'signoff' | 'container' | 'arrangement' | 'flowers'>> & {
   palette: Palette;
   preset: PresetName | null;
 };
@@ -31,6 +31,8 @@ const fromPreset = (name: PresetName, keep?: Draft): Draft => {
     senderName: keep?.senderName ?? '',
     message: keep?.message ?? '',
     heading: keep?.heading ?? defaultBouquetProps.heading ?? '',
+    /** Blank means the default, "with love,". */
+    signoff: keep?.signoff ?? '',
     container: p.container ?? 'wrap',
     arrangement: p.arrangement ?? 'dome',
     palette: { ...DEFAULT_PALETTE, ...p.palette },
@@ -191,6 +193,7 @@ export const Builder: React.FC = () => {
       senderName: draft.senderName.trim() || 'Me',
       message: draft.message.trim() || defaultBouquetProps.message,
       heading: draft.heading,
+      signoff: draft.signoff.trim() || defaultBouquetProps.signoff,
       container: draft.container,
       arrangement: draft.arrangement,
       palette: draft.palette,
@@ -360,6 +363,16 @@ export const Builder: React.FC = () => {
             <label className="field field--wide">
               <span>Line above their name</span>
               <input value={draft.heading} maxLength={60} onChange={(e) => update({ heading: e.target.value })} />
+            </label>
+            <label className="field field--wide">
+              <span>Sign-off before your name</span>
+              <input
+                value={draft.signoff}
+                maxLength={30}
+                placeholder={defaultBouquetProps.signoff}
+                onChange={(e) => update({ signoff: e.target.value })}
+              />
+              <small className="count">Leave blank for “{defaultBouquetProps.signoff}”</small>
             </label>
           </div>
         </section>

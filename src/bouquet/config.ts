@@ -58,7 +58,8 @@ export type PresetName =
   | 'sunflowerBasket'
   | 'lilyVase'
   | 'peonyBox'
-  | 'wildflowerPosy';
+  | 'wildflowerPosy'
+  | 'blueSkies';
 
 type Preset = Pick<BouquetProps, 'palette' | 'flowers' | 'container' | 'arrangement'> & { title: string };
 
@@ -196,6 +197,34 @@ export const PRESETS: Record<PresetName, Preset> = {
       { type: 'cosmos', x: 0.02, y: 0.92, scale: 0.9 },
       { type: 'daisy', x: -0.08, y: 0.18 },
       { type: 'anemone', x: 0.55, y: 0.08, scale: 0.85 },
+    ],
+  },
+  blueSkies: {
+    title: 'Blue skies',
+    container: 'wrap',
+    arrangement: 'dome',
+    palette: {
+      ...DEFAULT_PALETTE,
+      background: '#F3F6FA',
+      kraft: '#BFD2EA',
+      tissue: '#E3ECF8',
+      ribbon: '#5E7FB8',
+      rose: '#8FB3E3',
+      sage: '#8AA7A6',
+    },
+    flowers: [
+      { type: 'eucalyptus', x: -0.98, y: 0.51 },
+      { type: 'eucalyptus', x: 0.98, y: 0.51, scale: 0.95 },
+      { type: 'forgetMeNot', x: -0.69, y: 0.92 },
+      { type: 'forgetMeNot', x: 0.62, y: 0.95, scale: 0.9 },
+      { type: 'babysBreath', x: 0.02, y: 1.04, scale: 0.9 },
+      { type: 'hydrangea', color: '#8FB3E3', x: -0.46, y: 0.72, scale: 1.1 },
+      { type: 'cosmos', color: '#A9B8E0', x: 0.22, y: 0.84 },
+      { type: 'hydrangea', color: '#A9B8E0', x: 0.58, y: 0.56 },
+      { type: 'rose', color: '#BCD3F0', x: -0.02, y: 0.54, scale: 1.1 },
+      { type: 'rose', color: '#8FB3E3', x: -0.52, y: 0.34, scale: 0.95 },
+      { type: 'anemone', color: '#6F93D1', centerColor: '#2C2A4A', x: 0.3, y: 0.28 },
+      { type: 'ranunculus', color: '#DCE7F6', x: -0.12, y: 0.16, scale: 0.9 },
     ],
   },
 };
