@@ -58,7 +58,7 @@ const HEX = /^#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$/;
 const color = (v: unknown) => (typeof v === 'string' && (HEX.test(v) || (PALETTE_KEYS as string[]).includes(v)) ? v : undefined);
 const oneOf = <T extends string>(v: unknown, options: readonly T[]) => (options.includes(v as T) ? (v as T) : undefined);
 
-const cleanFlower = (raw: unknown): FlowerSpec | null => {
+export const cleanFlower = (raw: unknown): FlowerSpec | null => {
   if (!raw || typeof raw !== 'object') return null;
   const f = raw as Record<string, unknown>;
   const type = oneOf(f.type, Object.keys(FLOWER_TYPES) as FlowerType[]);
@@ -302,6 +302,25 @@ export const unpackGift = (code: string): BouquetProps | null => {
   } catch {
     return null;
   }
+};
+
+/**
+ * Reads a pasted gift link strictly: the design it holds, or null if the
+ * text isn't a gift link this site can read (no falling back to defaults).
+ */
+export const readGiftLink = (text: string): BouquetProps | null => {
+  let q: URLSearchParams;
+  try {
+    q = new URL(text.trim(), window.location.href).searchParams;
+  } catch {
+    return null;
+  }
+  const packed = q.get('b');
+  if (packed) return unpackGift(packed);
+  const code = q.get('g');
+  if (code) return decodeGift(code);
+  if (['to', 'from', 'msg', 'preset'].some((k) => q.has(k))) return giftFromSimpleParams(q);
+  return null;
 };
 
 export const giftLink = (p: BouquetProps) => {

@@ -14,15 +14,12 @@ import { DragHandles } from './maker/DragHandles';
 import { FlowerPicker } from './maker/FlowerPicker';
 import { qrLook } from './maker/qr';
 import { QrCode, qrCardPng } from './maker/QrCode';
-import { MAX_FLOWERS, MAX_MESSAGE, giftLink } from './share';
+import { bouquetPng } from './maker/snapshot';
+import { MAX_FLOWERS, MAX_MESSAGE, giftLink, readGiftLink } from './share';
+import { clearDraft, draftFromGift, loadDraft, saveDraft, type Draft } from './maker/draft';
 
 /** The frame the preview rests on: everything open, card showing. */
 const FINISHED = 400;
-
-type Draft = Required<Pick<BouquetProps, 'recipientName' | 'senderName' | 'message' | 'heading' | 'signoff' | 'container' | 'arrangement' | 'flowers'>> & {
-  palette: Palette;
-  preset: PresetName | null;
-};
 
 const fromPreset = (name: PresetName, keep?: Draft): Draft => {
   const p = PRESETS[name];
@@ -174,7 +171,12 @@ const FlowerRow: React.FC<{
 };
 
 export const Builder: React.FC = () => {
-  const [draft, setDraft] = useState<Draft>(() => fromPreset('classic'));
+  const [restored] = useState(() => loadDraft());
+  const [draft, setDraft] = useState<Draft>(() => restored ?? fromPreset('classic'));
+  /** The draft before the last big change (start over, open a link), for Undo. */
+  const [undo, setUndo] = useState<{ label: string; draft: Draft } | null>(null);
+  const [fixLink, setFixLink] = useState('');
+  const [fixError, setFixError] = useState('');
   const [adding, setAdding] = useState<FlowerType>('rose');
   /** Colour for flowers about to be added; undefined = the flower's natural colour. */
   const [addColor, setAddColor] = useState<string | undefined>(undefined);
@@ -209,6 +211,41 @@ export const Builder: React.FC = () => {
     document.title = 'Make a bouquet';
   }, []);
 
+  // Keep the bouquet on this device as it's made, but only once something
+  // has changed: an untouched starting bouquet isn't worth "picking up".
+  const untouched = useRef<Draft | null>(restored ? null : draft);
+  useEffect(() => {
+    if (draft === untouched.current) return;
+    const t = setTimeout(() => saveDraft(draft), 250);
+    return () => clearTimeout(t);
+  }, [draft]);
+
+  const replaceDraft = (next: Draft, label: string) => {
+    setUndo({ label, draft });
+    setDraft(next);
+    setActive(null);
+    setStatus('');
+  };
+
+  const startOver = () => {
+    const fresh = fromPreset('classic');
+    untouched.current = fresh;
+    clearDraft();
+    replaceDraft(fresh, 'Started a new bouquet.');
+  };
+
+  const openFix = (e: React.FormEvent) => {
+    e.preventDefault();
+    const sent = readGiftLink(fixLink);
+    if (!sent) {
+      setFixError('That doesn’t look like a gift link from this site. Paste the whole link you sent.');
+      return;
+    }
+    setFixError('');
+    setFixLink('');
+    replaceDraft(draftFromGift(sent), `Opened the gift for ${sent.recipientName}.`);
+  };
+
   // Rest the preview on the finished bouquet; "Play from the start" runs the whole thing.
   useEffect(() => {
     const player = playerRef.current;
@@ -227,6 +264,7 @@ export const Builder: React.FC = () => {
   const update = (patch: Partial<Draft>) => {
     setDraft((d) => ({ ...d, ...patch, preset: 'flowers' in patch || 'palette' in patch ? null : d.preset }));
     setStatus('');
+    setUndo(null);
   };
   const setColor = (key: keyof Palette, v: string) => update({ palette: { ...draft.palette, [key]: v } });
   const setFlower = (i: number, f: FlowerSpec) => update({ flowers: draft.flowers.map((x, j) => (j === i ? f : x)) });
@@ -260,20 +298,47 @@ export const Builder: React.FC = () => {
     }
   };
 
-  const qrFile = async () => {
-    const blob = await qrCardPng(qrRef.current!, gift, FONTS);
-    const name = `bouquet-for-${gift.recipientName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'you'}.png`;
-    return new File([blob], name, { type: 'image/png' });
+  const fileName = (suffix = '') =>
+    `bouquet-for-${gift.recipientName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'you'}${suffix}.png`;
+
+  const qrFile = async () => new File([await qrCardPng(qrRef.current!, gift, FONTS)], fileName('-qr'), { type: 'image/png' });
+
+  const download = (file: File) => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(file);
+    a.download = file.name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+
+  const [saving, setSaving] = useState(false);
+  const saveImage = async () => {
+    const player = playerRef.current;
+    if (!stageRef.current || !player) return;
+    setSaving(true);
+    try {
+      if (player.isPlaying()) player.pause();
+      player.seekTo(FINISHED);
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      const file = new File([await bouquetPng(stageRef.current)], fileName(), { type: 'image/png' });
+      // Phones: the share sheet has "Save image". Computers: a normal download.
+      const touch = navigator.maxTouchPoints > 0;
+      if (touch && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: `A bouquet for ${gift.recipientName}` }).catch(() => undefined);
+      } else {
+        download(file);
+        setStatus('Image saved: 1080 × 1920, ready for a story or status.');
+      }
+    } catch {
+      setStatus('Couldn’t make the image. Try again, or take a screenshot of the preview.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const downloadQr = async () => {
     try {
-      const file = await qrFile();
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(file);
-      a.download = file.name;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      download(await qrFile());
       setStatus('QR code saved. Print it, or send the picture.');
     } catch {
       setStatus('Couldn’t save the QR code. Try again, or take a screenshot of it.');
@@ -336,6 +401,58 @@ export const Builder: React.FC = () => {
         <header className="maker__intro">
           <h1 style={{ fontFamily: FONTS.serif }}>Make a bouquet</h1>
           <p>Choose the flowers, write a note, then send the link. It opens as an animated gift.</p>
+          <div className="intro__tools">
+            <p className="hint">{restored ? 'Picked up where you left off. ' : ''}Your bouquet is saved on this device as you go.</p>
+            <button type="button" className="btn btn--quiet" onClick={startOver}>
+              Start a new bouquet
+            </button>
+          </div>
+          {undo && (
+            <p className="intro__undo" role="status">
+              {undo.label}
+              <button
+                type="button"
+                className="btn btn--quiet"
+                onClick={() => {
+                  setDraft(undo.draft);
+                  setUndo(null);
+                }}
+              >
+                Undo
+              </button>
+            </p>
+          )}
+          <details className="fix">
+            <summary>Fix a gift you already sent</summary>
+            <form className="fix__form" onSubmit={openFix}>
+              <label className="field field--wide">
+                <span>Paste the gift link</span>
+                <input
+                  type="url"
+                  inputMode="url"
+                  value={fixLink}
+                  placeholder="https://…/flower-bouquet/?b=…"
+                  aria-invalid={fixError ? true : undefined}
+                  aria-describedby="fix-help"
+                  onChange={(e) => {
+                    setFixLink(e.target.value);
+                    setFixError('');
+                  }}
+                />
+              </label>
+              <button type="submit" className="btn btn--ghost" disabled={!fixLink.trim()}>
+                Open it here
+              </button>
+              {fixError && (
+                <p className="fix__error" role="alert">
+                  {fixError}
+                </p>
+              )}
+              <p className="hint" id="fix-help">
+                A sent link can’t change, so your fixes make a new link. Send them the new one; the old link keeps showing the old version.
+              </p>
+            </form>
+          </details>
         </header>
 
         <section className="panel-section" aria-labelledby="sec-note">
@@ -495,6 +612,9 @@ export const Builder: React.FC = () => {
                 Share…
               </button>
             )}
+            <button type="button" className="btn btn--ghost" onClick={saveImage} disabled={saving}>
+              {saving ? 'Making the image…' : 'Save as image'}
+            </button>
             <a className={`btn btn--quiet ${ready ? '' : 'is-disabled'}`} href={ready ? link : undefined} target="_blank" rel="noreferrer" aria-disabled={!ready}>
               Open the gift
             </a>

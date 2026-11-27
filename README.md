@@ -37,7 +37,13 @@ Open the site. The main page is the **maker**:
    and (for some) petals and centre colour.
 4. Set the ribbon, container and other colours.
 5. Tap **Copy gift link** (or **Share…** on a phone) and send it, or **Download QR code** to print
-   it on a card.
+   it on a card. **Save as image** makes a 1080 × 1920 picture of the finished bouquet for a
+   story or status.
+
+Your bouquet is saved in this browser as you go (localStorage, nothing is uploaded), so a
+refresh doesn't lose it; **Start a new bouquet** clears it (with Undo). To fix a gift you already
+sent, open **Fix a gift you already sent** and paste its link: it loads back into the maker.
+A sent link can't change, so send the new link it makes.
 
 The whole design is stored inside the link (`?b=…`), so there's no account or database. Anyone
 with the link can see the note. Whoever opens it gets the **Tap to open** gift.
@@ -63,6 +69,16 @@ The short form still works for quick links:
 `?to=Sam&from=Alex&msg=Happy%20birthday!&preset=lilyVase` (presets: `classic`, `blush`, `sunday`,
 `lavender`, `sunflowerBasket`, `lilyVase`, `peonyBox`, `wildflowerPosy`, `blueSkies`). Add `&frame=400` to open on
 a still frame.
+
+## Tests
+
+```bash
+npm test
+```
+
+`tests/share.test.ts` holds real gift links frozen at the time they were made and checks they
+still open the same gift. It runs before every deploy, so a change that would break links people
+have already sent stops the deploy instead of the gifts.
 
 ## Hosting on GitHub Pages
 
@@ -172,7 +188,8 @@ src/
   Builder.tsx              The maker page: live preview, flower list, colours, Copy link
   Gift.tsx                 Gift page: cover, music, breeze, endless hold
   share.ts                 Packs a design into the link and reads it back safely
-  maker/                   Flower and colour pickers, drag handles, QR code and stickers
+  maker/                   Pickers, drag handles, QR code, saved draft, Save as image
+tests/share.test.ts        Frozen links that must keep opening
   audio/musicBox.ts        Web Audio music box and breeze whoosh
   remotion/Root.tsx        Compositions (Bouquet, Bouquet-breeze, one per preset)
   bouquet/

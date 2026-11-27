@@ -11,7 +11,8 @@
     "studio": "remotion studio src/remotion/index.ts",
     "render": "remotion render src/remotion/index.ts Bouquet out/bouquet.mp4",
     "typecheck": "tsc --noEmit",
-    "canvas:bundle": "esbuild scripts/canvas/entry.ts --bundle --format=iife --global-name=BQ --minify --target=es2019 --alias:remotion=./scripts/canvas/remotion-shim.ts --outfile=out/canvas-scene.js"
+    "canvas:bundle": "esbuild scripts/canvas/entry.ts --bundle --format=iife --global-name=BQ --minify --target=es2019 --alias:remotion=./scripts/canvas/remotion-shim.ts --outfile=out/canvas-scene.js",
+    "test": "vitest run"
   },
   "dependencies": {
     "@remotion/cli": "^4.0.547",
@@ -27,6 +28,7 @@
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^5.2.0",
     "typescript": "^7.0.2",
-    "vite": "^7.3.8"
+    "vite": "^7.3.8",
+    "vitest": "^3.2.7"
   }
 }
